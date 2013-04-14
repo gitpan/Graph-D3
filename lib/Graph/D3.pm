@@ -2,7 +2,7 @@ package Graph::D3;
 
 use strict;
 use 5.008_005;
-our $VERSION = '0.01';
+our $VERSION = '0.03';
 
 use Moo;
 use JSON;
@@ -43,6 +43,19 @@ sub force_directed_graph {
     return $self->type eq 'json' ? encode_json $output : $output;
 }
 
+# http://mbostock.github.io/d3/talk/20111116/bundle.html
+sub hierarchical_edge_bundling {
+    my $self = shift;
+    my @bundle;
+    for my $vertex ($self->graph->vertices) {
+        my $size = $self->graph->get_vertex_attribute($vertex, 'size');
+        $size = 1 unless (defined $size);
+        my @imports = $self->graph->predecessors($vertex);
+        push @bundle, {name => $vertex, size => $size, imports => \@imports };
+    }
+    return $self->type eq 'json' ? encode_json \@bundle : \@bundle;
+}
+
 
 1;
 __END__
@@ -57,16 +70,17 @@ Graph::D3 - Create ref/json to show node-edge graph with D3.js
 
   use Graph;
   use Graph::D3;
-  
   my $g = new Graph(
       vertices => [qw/1 2 3 4 5/], 
       edges => [[qw/1 2/], [qw/2 3/], [qw/3 5/], [qw/4 1/]] 
   );
   my $d3 = new Graph::D3(graph => $g);
-  $output = $d3->force_directed_graph(); #output is hash reference
+  my $output = $d3->force_directed_graph(); #output is hash reference
+  $output = $d3->hierarchical_edge_bundling(); #output is hash reference
+
   $d3 = new Graph::D3(graph => $g, type => json); 
-  $json = $d3->force_directed_graph(); # output is json format
-  
+  my $json = $d3->force_directed_graph(); # output is json format
+  $json = $d3->hierarchical_edge_bundling(); # output is json format
 
 =head1 DESCRIPTION
 
@@ -79,12 +93,18 @@ This module simply supports node-edge graph in the example.
 
 This outputs the format which is used for Force Directed Graph described below.
 
-https://gist.github.com/mbostock/4062045
-http://bl.ocks.org/mbostock/4062045
+https://gist.github.com/mbostock/4062045,http://bl.ocks.org/mbostock/4062045
 
-The graph should be directed grpah.
-Node in Graph can have group attribute (Default is all 1) to have different node color.
-Also Edge in Graph can have value attribe(defalut is all 1) to have different length of edge.
+The input graph should be directed grpah.
+Node in Graph can have 'group' attribute (Default is all 1) to have different node color.
+Also Edge in Graph can have 'value' attribe(defalut is all 1).
+
+=head2 hierarchical_edge_bundling 
+
+http://mbostock.github.io/d3/talk/20111116/bundle.html
+
+The input graph shoudl be directed graph.
+Node in Graph can have 'size' attribute (Default is all 1). 
 
 =head1 AUTHOR
 
